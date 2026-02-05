@@ -17,117 +17,123 @@ This project supports creating resources through individual sub-modules, or thro
 
 ### Integrated Cluster w/ Services
 
-```hcl
-module "ecs" {
+```module "ecs" {
   source = "terraform-aws-modules/ecs/aws"
 
-  cluster_name = "ecs-integrated"
+  cluster_name = "ecs-randomized-cluster"
 
   cluster_configuration = {
     execute_command_configuration = {
       logging = "OVERRIDE"
       log_configuration = {
-        cloud_watch_log_group_name = "/aws/ecs/aws-ec2"
+        cloud_watch_log_group_name = "/aws/ecs/random-logs"
       }
     }
   }
 
   # Cluster capacity providers
   cluster_capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+
   default_capacity_provider_strategy = {
     FARGATE = {
-      weight = 50
-      base   = 20
+      weight = 60
+      base   = 2
     }
     FARGATE_SPOT = {
-      weight = 50
+      weight = 40
     }
   }
 
   services = {
-    ecsdemo-frontend = {
-      cpu    = 1024
-      memory = 4096
+    web-api-service = {
+      cpu    = 2048
+      memory = 8192
 
-      # Container definition(s)
       container_definitions = {
 
-        fluent-bit = {
-          cpu       = 512
-          memory    = 1024
+        log-router = {
+          cpu       = 256
+          memory    = 512
           essential = true
-          image     = "906394416424.dkr.ecr.us-west-2.amazonaws.com/aws-for-fluent-bit:stable"
+          image     = "123456789012.dkr.ecr.eu-central-1.amazonaws.com/fluent-bit:latest"
+
           firelensConfiguration = {
             type = "fluentbit"
           }
-          memoryReservation = 50
+
+          memoryReservation = 64
         }
 
-        ecs-sample = {
-          cpu       = 512
-          memory    = 1024
+        app-container = {
+          cpu       = 1024
+          memory    = 2048
           essential = true
-          image     = "public.ecr.aws/aws-containers/ecsdemo-frontend:776fd50"
-          portMappings = [
-            {
-              name          = "ecs-sample"
-              containerPort = 80
-              protocol      = "tcp"
-            }
-          ]
+          image     = "public.ecr.aws/nginx/nginx:1.25"
 
-          # Example image used requires access to write to root filesystem
+          portMappings = [{
+            name          = "http-api"
+            containerPort = 8080
+            protocol      = "tcp"
+          }]
+
           readonlyRootFilesystem = false
 
           dependsOn = [{
-            containerName = "fluent-bit"
+            containerName = "log-router"
             condition     = "START"
           }]
 
           enable_cloudwatch_logging = false
+
           logConfiguration = {
             logDriver = "awsfirelens"
             options = {
-              Name                    = "firehose"
-              region                  = "eu-west-1"
-              delivery_stream         = "my-stream"
-              log-driver-buffer-limit = "2097152"
+              Name            = "firehose"
+              region          = "eu-central-1"
+              delivery_stream = "random-delivery-stream"
             }
           }
-          memoryReservation = 100
+
+          memoryReservation = 256
         }
       }
 
       service_connect_configuration = {
-        namespace = "example"
+        namespace = "internal"
         service = [{
           client_alias = {
-            port     = 80
-            dns_name = "ecs-sample"
+            port     = 8080
+            dns_name = "app-service"
           }
-          port_name      = "ecs-sample"
-          discovery_name = "ecs-sample"
+          port_name      = "http-api"
+          discovery_name = "app-service"
         }]
       }
 
       load_balancer = {
         service = {
-          target_group_arn = "arn:aws:elasticloadbalancing:eu-west-1:1234567890:targetgroup/bluegreentarget1/209a844cd01825a4"
-          container_name   = "ecs-sample"
-          container_port   = 80
+          target_group_arn = "arn:aws:elasticloadbalancing:eu-central-1:999999999999:targetgroup/randomtg/abcd1234efgh5678"
+          container_name   = "app-container"
+          container_port   = 8080
         }
       }
 
-      subnet_ids = ["subnet-abcde012", "subnet-bcde012a", "subnet-fghi345a"]
+      subnet_ids = [
+        "subnet-11aa22bb",
+        "subnet-33cc44dd",
+        "subnet-55ee66ff"
+      ]
 
       security_group_ingress_rules = {
-        alb_3000 = {
-          description                  = "Service port"
-          from_port                    = local.container_port
+        alb_http = {
+          description                  = "HTTP access from ALB"
+          from_port                    = 8080
+          to_port                      = 8080
           ip_protocol                  = "tcp"
-          referenced_security_group_id = "sg-12345678"
+          referenced_security_group_id = "sg-0a1b2c3d4e5f67890"
         }
       }
+
       security_group_egress_rules = {
         all = {
           ip_protocol = "-1"
@@ -138,9 +144,12 @@ module "ecs" {
   }
 
   tags = {
-    Environment = "Development"
-    Project     = "Example"
+    Environment = "Staging"
+    Project     = "RandomizedECS"
+    Owner       = "Terraform"
   }
+}
+
 }
 ```
 
