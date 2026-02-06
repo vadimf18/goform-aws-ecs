@@ -2,9 +2,6 @@
 
 This document is intended to describe the decisions and assumptions that went into the current design of the ECS module(s). Various concepts of Amazon ECS are covered here to help align readers with the service and its capabilities and how they influence the design provided by this project.
 
-<p align="center">
-  <img src="./images/complete.png" alt="ECS Design" width="80%">
-</p>
 
 ## ECS Constructs
 
@@ -64,9 +61,7 @@ This module supports creating a task execution IAM role in two different ways to
 1. Users can create one task execution IAM role and re-use, or share, this role across all services within the cluster. This pattern is commonly used when a cluster is used by one team (each team gets their own cluster). When using this pattern, users can elect to create the task execution IAM role from within the cluster module.
 2. Users can create one task execution IAM role per service. This pattern is commonly used when a cluster is used by multiple teams (each team gets their own service within the cluster), and access to SSM parameters and/or secrets need to be scoped per service and therefore, per task execution IAM role. When using this pattern, users can elect to create the task execution IAM role from within the service module.
 
-<p align="center">
-  <img src="./images/cluster.png" alt="ECS Cluster" width="60%">
-</p>
+
 
 ### Service
 
@@ -238,9 +233,7 @@ Application auto scaling is enabled by default and can be disabled by setting `e
   }
   ```
 
-<p align="center">
-  <img src="./images/task.png" alt="ECS Task" width="40%">
-</p>
+
 
 #### Container Definition
 
